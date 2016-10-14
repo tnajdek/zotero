@@ -82,9 +82,6 @@ const xpcomFilesLocal = [
 	'data/groups',
 	'data/itemFields',
 	'data/relations',
-	'data/search',
-	'data/searchConditions',
-	'data/searches',
 	'data/tags',
 	'db',
 	'duplicates',
@@ -101,6 +98,7 @@ const xpcomFilesLocal = [
 	'report',
 	'router',
 	'schema',
+	'search',
 	'server',
 	'style',
 	'sync',
@@ -149,7 +147,7 @@ var isFirstLoadThisSession = true;
 var zContext = null;
 var zInitOptions = {};
 
-ZoteroContext = function() {}
+var ZoteroContext = function() {}
 ZoteroContext.prototype = {
 	/**
 	 * Convenience method to replicate window.alert()
@@ -324,7 +322,7 @@ function makeZoteroContext(isConnector) {
 	// add connector-related properties
 	zContext.Zotero.isConnector = isConnector;
 	zContext.Zotero.instanceID = instanceID;
-	zContext.Zotero.__defineGetter__("isFirstLoadThisSession", function() isFirstLoadThisSession);
+	zContext.Zotero.__defineGetter__("isFirstLoadThisSession", () => isFirstLoadThisSession);
 };
 
 /**
@@ -505,4 +503,12 @@ ZoteroCommandLineHandler.prototype.__defineGetter__("Zotero", function() {
 	return zContext.Zotero;
 });
 
-var NSGetFactory = XPCOMUtils.generateNSGetFactory([ZoteroService, ZoteroCommandLineHandler]);
+/**
+* XPCOMUtils.generateNSGetFactory was introduced in Mozilla 2 (Firefox 4).
+* XPCOMUtils.generateNSGetModule is for Mozilla 1.9.2 (Firefox 3.6).
+*/
+if (XPCOMUtils.generateNSGetFactory) {
+	var NSGetFactory = XPCOMUtils.generateNSGetFactory([ZoteroService, ZoteroCommandLineHandler]);
+} else {
+	var NSGetModule = XPCOMUtils.generateNSGetModule([ZoteroService, ZoteroCommandLineHandler]);
+}

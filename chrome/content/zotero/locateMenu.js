@@ -384,8 +384,9 @@ var Zotero_LocateMenu = new function() {
 			return _getURL(item).then((val) => val !== false);
 		}
 		this.handleItems = Zotero.Promise.coroutine(function* (items, event) {
-			var urls = yield Zotero.Promise.all([for (item of items) _getURL(item)]);
-			ZoteroPane_Local.loadURI([for (url of urls) if (url) url], event);
+			var urls = yield Zotero.Promise.all(items.map(item => _getURL(item)));
+
+			ZoteroPane_Local.loadURI(urls.filter(url => !!url), event);
 		});
 		
 		var _getURL = Zotero.Promise.coroutine(function* (item) {
@@ -446,9 +447,10 @@ var Zotero_LocateMenu = new function() {
 	ViewOptions.file = new function() {
 		this.icon = "chrome://zotero/skin/treeitem-attachment-file.png";
 		
-		this.canHandleItem = function (item) {
-			return _getFile(item).then((item) => !!item);
-		}
+		this.canHandleItem = Zotero.Promise.coroutine(function* (item) {
+			item = yield _getFile(item);
+			return !!item;
+		});
 		
 		this.handleItems = Zotero.Promise.coroutine(function* (items, event) {
 			var attachments = [];
@@ -543,9 +545,10 @@ var Zotero_LocateMenu = new function() {
 		this.icon = "chrome://zotero/skin/locate-show-file.png";
 		this.useExternalViewer = true;
 		
-		this.canHandleItem = function (item) {
-			return _getBestFile(item).then(function (item) !!item);
-		}
+		this.canHandleItem = Zotero.Promise.coroutine(function* (item) {
+			item = yield _getBestFile(item);
+			return !!item;
+		});
 		
 		this.handleItems = Zotero.Promise.coroutine(function* (items, event) {
 			for (let item of items) {
@@ -573,7 +576,7 @@ var Zotero_LocateMenu = new function() {
 	 */
 	ViewOptions._libraryLookup = new function() {
 		this.icon = "chrome://zotero/skin/locate-library-lookup.png";
-		this.canHandleItem = function (item) Zotero.Promise.resolve(item.isRegularItem());
+		this.canHandleItem = item => Zotero.Promise.resolve(item.isRegularItem());
 		this.handleItems = Zotero.Promise.method(function (items, event) {
 			var urls = [];
 			for (let item of items) {

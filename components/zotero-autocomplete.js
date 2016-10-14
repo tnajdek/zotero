@@ -231,10 +231,10 @@ ZoteroAutoComplete.prototype.startSearch = Zotero.Promise.coroutine(function* (s
 		if (resultsCallback) {
 			resultsCallback(results);
 			this.updateResults(
-				[for (x of results) x.val],
-				[for (x of results) x.comment],
+				Object.entries(results).map(x => x.val),
+				Object.entries(results).map(x => x.comment),
 				false
-			)
+			);
 		}
 		resultCode = null;
 		Zotero.debug("Autocomplete query completed");

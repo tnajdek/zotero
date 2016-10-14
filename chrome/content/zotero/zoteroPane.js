@@ -33,7 +33,7 @@ var ZoteroPane = new function()
 	this.collectionsView = false;
 	this.itemsView = false;
 	this._listeners = {};
-	this.__defineGetter__('loaded', function () _loaded);
+	this.__defineGetter__('loaded', function () { return _loaded; });
 	var _lastSelectedItems = [];
 	
 	//Privileged methods

@@ -70,7 +70,7 @@ var Zotero_Tag_Color_Chooser = new function() {
 			}
 			else {
 				// Get unused color at random
-				var usedColors = [for (x of tagColors.values()) x.color];
+				var usedColors = tagColors.values().map(x => x.color);
 				var unusedColors = Zotero.Utilities.arrayDiff(
 					colorPicker.colors, usedColors
 				);
