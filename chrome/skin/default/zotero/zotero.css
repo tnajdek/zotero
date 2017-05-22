@@ -198,11 +198,6 @@ zoterosearch
 	-moz-binding: url('chrome://zotero/content/bindings/zoterosearch.xml#search-box');
 }
 
-zoterotagselector
-{
-	-moz-binding: url('chrome://zotero/content/bindings/tagselector.xml#tag-selector');
-}
-
 
 zoterosearchcondition
 {

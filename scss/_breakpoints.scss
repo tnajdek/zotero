@@ -1,0 +1,22 @@
+$res: 1200px;
+//
+// Breakpoints
+// --------------------------------------------------
+
+@mixin bp-up($name, $breakpoints: $grid-breakpoints) {
+  $min: breakpoint-min($name, $breakpoints);
+  @if $min {
+    @if $min < $res {
+      @content;
+    }
+  }
+}
+
+@mixin bp-down($name, $breakpoints: $grid-breakpoints) {
+  $max: breakpoint-max($name, $breakpoints);
+  @if $max {
+    @if $max >= $res {
+        @content;
+    }
+  }
+}

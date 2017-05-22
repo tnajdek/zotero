@@ -23,6 +23,7 @@
     ***** END LICENSE BLOCK *****
 */
 
+const TagSelectorContainer = require('container/tag-selector-container.js');
 /*
  * This object contains the various functions for the interface
  */
@@ -181,9 +182,10 @@ var ZoteroPane = new function()
 		menu.addEventListener("popupshowing", ZoteroPane_Local.contextPopupShowing, false);
 		
 		var tagSelector = document.getElementById('zotero-tag-selector');
-		tagSelector.onchange = function () {
-			return ZoteroPane_Local.updateTagFilter();
-		};
+
+		ZoteroPane_Local.tagSelector = TagSelectorContainer.init(tagSelector, {
+			onSelection: ZoteroPane_Local.updateTagFilter.bind(ZoteroPane_Local)
+		});
 		
 		Zotero.Keys.windowInit(document);
 		
@@ -352,8 +354,7 @@ var ZoteroPane = new function()
 			this.serializePersist();
 		}
 		
-		var tagSelector = document.getElementById('zotero-tag-selector');
-		tagSelector.unregister();
+		ZoteroPane_Local.tagSelector.unregister();
 		
 		if(this.collectionsView) this.collectionsView.unregister();
 		if(this.itemsView) this.itemsView.unregister();
@@ -1058,17 +1059,18 @@ var ZoteroPane = new function()
 		// and focus filter textbox
 		if (showing) {
 			yield this.setTagScope();
-			tagSelector.focusTextbox();
+			ZoteroPane_Local.tagSelector.focusTextbox();
 		}
 		// If hiding, clear selection
 		else {
-			tagSelector.uninit();
+			ZoteroPane_Local.tagSelector.uninit();
 		}
 	});
 	
 	
 	this.updateTagSelectorSize = function () {
-		//Zotero.debug('Updating tag selector size');
+		console.info('Not implemented: updateTagSelectorSize');
+		// //Zotero.debug('Updating tag selector size');
 		var zoteroPane = document.getElementById('zotero-pane-stack');
 		var splitter = document.getElementById('zotero-tags-splitter');
 		var tagSelector = document.getElementById('zotero-tag-selector');
@@ -1084,8 +1086,7 @@ var ZoteroPane = new function()
 			tagSelector.setAttribute('height', maxTS);
 		}
 		
-		var height = tagSelector.boxObject.height;
-		
+		var height = tagSelector.getBoundingClientRect().height;
 		
 		/*Zotero.debug("tagSelector.boxObject.height: " + tagSelector.boxObject.height);
 		Zotero.debug("tagSelector.getAttribute('height'): " + tagSelector.getAttribute('height'));
@@ -1129,15 +1130,10 @@ var ZoteroPane = new function()
 	}
 	
 	
-	function getTagSelection() {
-		var tagSelector = document.getElementById('zotero-tag-selector');
-		return tagSelector.selection ? tagSelector.selection : new Set();
-	}
+
 	
 	
-	this.clearTagSelection = function () {
-		document.getElementById('zotero-tag-selector').deselectAll();
-	}
+
 	
 	
 	/*
@@ -1145,7 +1141,7 @@ var ZoteroPane = new function()
 	 */
 	this.updateTagFilter = Zotero.Promise.coroutine(function* () {
 		if (this.itemsView) {
-			yield this.itemsView.setFilter('tags', getTagSelection());
+			yield this.itemsView.setFilter('tags', ZoteroPane_Local.tagSelector.getTagSelection());
 		}
 	});
 	
@@ -1164,23 +1160,23 @@ var ZoteroPane = new function()
 	 *
 	 * Passed to the items tree to trigger on changes
 	 */
-	this.setTagScope = Zotero.Promise.coroutine(function* () {
-		var collectionTreeRow = this.getCollectionTreeRow();
+	this.setTagScope = async function () {
+		var collectionTreeRow = self.getCollectionTreeRow();
 		var tagSelector = document.getElementById('zotero-tag-selector');
-		if (this.tagSelectorShown()) {
+		if (self.tagSelectorShown()) {
 			Zotero.debug('Updating tag selector with current tags');
 			if (collectionTreeRow.editable) {
-				tagSelector.mode = 'edit';
+				ZoteroPane_Local.tagSelector.setMode('edit');
 			}
 			else {
-				tagSelector.mode = 'view';
+				ZoteroPane_Local.tagSelector.setMode('view');
 			}
-			tagSelector.collectionTreeRow = collectionTreeRow;
-			tagSelector.updateScope = () => this.setTagScope();
-			tagSelector.libraryID = collectionTreeRow.ref.libraryID;
-			tagSelector.scope = yield collectionTreeRow.getChildTags();
+			ZoteroPane_Local.tagSelector.collectionTreeRow = collectionTreeRow;
+			ZoteroPane_Local.tagSelector.updateScope = self.setTagScope;
+			ZoteroPane_Local.tagSelector.libraryID = collectionTreeRow.ref.libraryID;
+			ZoteroPane_Local.tagSelector.scope = await collectionTreeRow.getChildTags();
 		}
-	});
+	};
 	
 	
 	this.onCollectionSelected = function () {
@@ -1232,7 +1228,7 @@ var ZoteroPane = new function()
 			}*/
 			
 			collectionTreeRow.setSearch('');
-			collectionTreeRow.setTags(getTagSelection());
+			collectionTreeRow.setTags(ZoteroPane_Local.tagSelector.getTagSelection());
 			
 			this._updateToolbarIconsForRow(collectionTreeRow);
 			

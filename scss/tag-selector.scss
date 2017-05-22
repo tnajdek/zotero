@@ -1,0 +1,16 @@
+@import './abstract';
+@import '../node_modules/zotero-web-library/sass/components/tag-selector';
+
+#zotero-tag-selector {
+	min-height: 100px;
+	width: 100%;
+	display: flex;
+}
+
+.tag-selector {
+	flex: 1 0 100%;
+}
+
+#zotero-tag-selector[collapsed] {
+	visibility: collapse
+}

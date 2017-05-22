@@ -1,0 +1,103 @@
+.hidden-xs-up {
+  display: none !important; }
+
+.hidden-sm-up {
+  display: none !important; }
+
+.hidden-md-up {
+  display: none !important; }
+
+body:not(.touch) .hidden-mouse-xs-up {
+  display: none !important; }
+
+body:not(.touch) .hidden-mouse-sm-up {
+  display: none !important; }
+
+body:not(.touch) .hidden-mouse-md-up {
+  display: none !important; }
+
+body:not(.touch) .hidden-mouse {
+  display: none !important; }
+
+.touch .hidden-touch-xs-up {
+  display: none !important; }
+
+.touch .hidden-touch-sm-up {
+  display: none !important; }
+
+.touch .hidden-touch-md-up {
+  display: none !important; }
+
+.touch .hidden-touch {
+  display: none !important; }
+
+.offscreen {
+  clip: rect(1px 1px 1px 1px);
+  position: absolute; }
+
+.library .tag-selector {
+  position: absolute;
+  bottom: 0;
+  left: 0; }
+
+.tag-selector {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; }
+
+.tag-selector-container {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  overflow: auto;
+  height: auto; }
+
+.tag-selector-filter-container {
+  height: auto;
+  flex: 0 0 2.5em;
+  display: flex;
+  flex-direction: row;
+  padding: .5em .25em; }
+
+.tag-selector-list {
+  list-style: none;
+  display: inline-block;
+  margin: 0;
+  padding: 0; }
+
+.tag-selector-filter {
+  flex: 1 0 40px;
+  min-width: 40px; }
+
+.tag-selector-actions {
+  flex: 0 0 32px; }
+
+.tag-selector-item {
+  border-radius: 1em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-block;
+  padding: .05em .5em;
+  margin: 0; }
+  .tag-selector-item.selected {
+    background-color: #5c93e5;
+    border: 1px solid #5c93e5; }
+  .tag-selector-item.colored {
+    font-weight: bold; }
+  .tag-selector-item.disabled {
+    opacity: .6;
+    cursor: auto;
+    pointer-events: none; }
+  .tag-selector-item:not(.disabled):hover {
+    background-color: #9ebff0;
+    border: 1px solid #5c93e5; }
+
+#zotero-tag-selector {
+  min-height: 100px;
+  width: 100%;
+  display: flex; }
+
+.tag-selector {
+  flex: 1 0 100%; }
+
+#zotero-tag-selector[collapsed] {
+  visibility: collapse; }
