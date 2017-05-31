@@ -63,7 +63,7 @@ Services.scriptloader.loadSubScript("resource://zotero/polyfill.js");
 	this.isWin;
 	this.initialURL; // used by Schema to show the changelog on upgrades
 	
-	this.Promise = require('resource://zotero/bluebird/bluebird.js');
+	this.Promise = require('resource://zotero/bluebird.js');
 	
 	this.getActiveZoteroPane = function() {
 		var win = Services.wm.getMostRecentWindow("navigator:browser");
