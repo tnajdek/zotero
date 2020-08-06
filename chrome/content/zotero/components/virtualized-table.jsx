@@ -837,7 +837,7 @@ class VirtualizedTable extends React.Component {
 		if (this.props.alternatingRowColors) {
 			this._jsWindow.innerElem.style.background = `
 				repeating-linear-gradient(
-				  0deg,
+				  to bottom,
 				  ${this.props.alternatingRowColors[0]},
 				  ${this.props.alternatingRowColors[0]} ${this._rowHeight}px,
 				  ${this.props.alternatingRowColors[1]} ${this._rowHeight}px,
