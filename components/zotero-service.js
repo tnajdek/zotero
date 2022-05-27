@@ -494,8 +494,9 @@ ZoteroCommandLineHandler.prototype = {
 		else if (cmdLine.handleFlag("ZoteroDebugText", false)) {
 			zInitOptions.forceDebugLog = 1;
 		}
-		
+
 		zInitOptions.forceDataDir = cmdLine.handleFlagWithParam("datadir", false);
+		zInitOptions.componentDev = cmdLine.handleFlagWithParam("ZoteroComponentDev", false);
 		
 		// handler to open Zotero pane at startup in Zotero for Firefox
 		if (!isStandalone() && cmdLine.handleFlag("ZoteroPaneOpen", false)) {

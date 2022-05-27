@@ -31,12 +31,12 @@ import PropTypes from 'prop-types';
 
 import FilePicker from 'zotero/filePicker';
 import ReactDom from 'react-dom';
-import Wizard from './components/wizard';
-import WizardPage from './components/wizardPage';
-import RadioSet from './components/radioSet';
-import ProgressBar from './components/progressBar';
-import ProgressQueueTable from './components/progressQueueTable';
-import { nextHTMLID } from './components/utils';
+import Wizard from 'components/wizard';
+import WizardPage from 'components/wizardPage';
+import RadioSet from 'components/radioSet';
+import ProgressBar from 'components/progressBar';
+import ProgressQueueTable from 'components/progressQueueTable';
+import { nextHTMLID } from 'components/utils';
 
 const ImportWizard = memo(({ mendeleyCode, libraryID }) => {
 	const id = useRef(nextHTMLID());
@@ -513,4 +513,4 @@ ImportWizard.propTypes = {
 	mendeleyCode: PropTypes.string,
 };
 
-Zotero.ImportWizard = ImportWizard;
+export default ImportWizard;

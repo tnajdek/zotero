@@ -117,6 +117,7 @@ function comparePaths(actualPath, testedPath) {
 	return path.normalize(actualPath) === path.normalize(testedPath);
 }
 
+
 const envCheckTrue = env => !!(env && (parseInt(env) || env === true || env === "true"));
 
 module.exports = {

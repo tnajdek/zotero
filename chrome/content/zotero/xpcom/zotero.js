@@ -37,7 +37,7 @@ Services.scriptloader.loadSubScript("resource://zotero/polyfill.js");
 /*
  * Core functions
  */
- (function(){
+ (function() {
 	// Privileged (public) methods
 	this.getStorageDirectory = getStorageDirectory;
 	this.debug = debug;
@@ -191,6 +191,7 @@ Services.scriptloader.loadSubScript("resource://zotero/polyfill.js");
 			opts.filter(opt => options[opt]).forEach(opt => this[opt] = true);
 			
 			this.forceDataDir = options.forceDataDir;
+			this.componentDev = options.componentDev;
 		}
 		
 		this.mainThread = Services.tm.mainThread;
@@ -746,6 +747,15 @@ Services.scriptloader.loadSubScript("resource://zotero/polyfill.js");
 			Zotero.addShutdownListener(() => Zotero.Feeds.uninit());
 			
 			Zotero.Schema.schemaUpdatePromise.then(Zotero.purgeDataObjects.bind(Zotero));
+
+			if (Zotero.componentDev) {
+				console.log('1');
+				Components.classes['@mozilla.org/embedcomp/window-watcher;1']
+					.getService(Components.interfaces.nsIWindowWatcher)
+					.openWindow(null, 'chrome://zotero/content/componentDev.xhtml',
+						"componentDev", "chrome,dialog=yes,resizable,centerscreen,menubar,scrollbars", null
+					);
+			}
 			
 			return true;
 		}

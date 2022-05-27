@@ -798,10 +798,18 @@ const Require = iced(function Require(loader, requirer) {
     // We also freeze module to prevent it from further changes
     // at runtime.
     if (!(uri in modules)) {
+      
       // Many of the loader's functionalities are dependent
       // on modules[uri] being set before loading, so we set it and
       // remove it if we have any errors.
-      module = modules[uri] = Module(requirement, uri);
+      if (uri.startsWith('file://')) {
+        // console.log('load and SKIP cache', uri);
+        module = Module(requirement, uri + `?t=${Date.now()}`);
+        delete loader.sandboxes[uri];
+      } else {
+        // console.log('load and cache it', uri);
+        module = modules[uri] = Module(requirement, uri);
+      }
       try {
         freeze(load(loader, module));
       }
