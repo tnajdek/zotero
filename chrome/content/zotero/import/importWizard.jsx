@@ -38,7 +38,7 @@ import ProgressBar from './components/progressBar';
 import ProgressQueueTable from './components/progressQueueTable';
 import { nextHTMLID } from './components/utils';
 
-const ImportWizard = memo(({ mendeleyCode, libraryID }) => {
+const ImportWizard = memo(({ mendeleyCode, libraryID = Zotero.Libraries.userLibraryID }) => {
 	const id = useRef(nextHTMLID());
 	const translationResult = useRef(null);
 	const wizardRef = useRef(null);
