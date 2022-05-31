@@ -97,6 +97,10 @@ Zotero.IPC = new function() {
 				if (Zotero.isConnector) {
 					reinit(false, true);
 				}
+			} else if (msg === 'devHelperUpdate') {
+				if (Zotero.isStandalone && Zotero.DevHelper) {
+					Zotero.DevHelper.refresh();
+				}
 			}
 		}
 	}

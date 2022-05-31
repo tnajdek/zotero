@@ -3,18 +3,19 @@ const fs = require('fs-extra');
 const chokidar = require('chokidar');
 const multimatch = require('multimatch');
 const { exec } = require('child_process');
-const { dirs, jsFiles, scssFiles, ignoreMask, copyDirs, symlinkFiles } = require('./config');
+const { dirs, jsFiles, scssFiles, ignoreMask, copyDirs, symlinkFiles, rewriteSrcFiles } = require('./config');
 const { envCheckTrue, onSuccess, onError, getSignatures, writeSignatures, cleanUp, formatDirsForMatcher } = require('./utils');
 const getJS = require('./js');
 const getSass = require('./sass');
 const getCopy = require('./copy');
 const getSymlinks = require('./symlinks');
-
+const getRewriteSrc = require('./rewrite-src');
+const colors = require('colors/safe');
 
 const ROOT = path.resolve(__dirname, '..');
 const addOmniExecPath = path.join(ROOT, '..', 'zotero-standalone-build', 'scripts', 'add_omni_file');
 let shouldAddOmni = false;
-
+const REWRITE_SRC = envCheckTrue(process.env.REWRITE_SRC);
 const source = [
 	'chrome',
 	'components',
@@ -41,7 +42,8 @@ const symlinks = symlinkFiles
 				.concat([`!${formatDirsForMatcher(dirs)}/**/*.js`])
 				.concat([`!${formatDirsForMatcher(dirs)}/**/*.jsx`])
 				.concat([`!${formatDirsForMatcher(dirs)}/**/*.scss`])
-				.concat([`!${formatDirsForMatcher(copyDirs)}/**`]);
+				.concat([`!${formatDirsForMatcher(copyDirs)}/**`])
+				.concat(REWRITE_SRC ? rewriteSrcFiles.map(rsf => `!${rsf}`) : []);
 
 var signatures;
 
@@ -78,6 +80,16 @@ async function addOmniFiles(relPaths) {
 	};
 }
 
+async function notifyIPC() {
+	const pipesDir = path.normalize("/Users/doppler/Zotero default-beta/pipes/");
+	const pipeFiles = await fs.readdir(pipesDir);
+	pipeFiles.forEach((pipeFile) => {
+		const pipeFileStream = fs.createWriteStream(path.join(pipesDir, pipeFile));
+		pipeFileStream.end('devHelperUpdate');
+	});
+	console.log(`${colors.magenta('Notify:')} ${pipeFiles.length} clients`);
+}
+
 async function getWatch() {
 	try {
 		await fs.access(addOmniExecPath, fs.constants.F_OK);
@@ -104,6 +116,9 @@ async function getWatch() {
 			if (!result && multimatch(path, copyDirs.map(d => `${d}/**`)).length) {
 				result = await getCopy(path, {}, signatures);
 			}
+			if (REWRITE_SRC && !result && multimatch(path, rewriteSrcFiles).length) {
+				result = await getRewriteSrc(rewriteSrcFiles, {}, signatures)
+			}
 			if (!result && multimatch(path, symlinks).length) {
 				result = await getSymlinks(path, { nodir: true }, signatures);
 			}
@@ -113,6 +128,10 @@ async function getWatch() {
 
 			if (shouldAddOmni && result.outFiles?.length) {
 				onSuccess(await addOmniFiles(result.outFiles));
+			}
+
+			if (REWRITE_SRC && result.outFiles?.length) {
+				await notifyIPC();
 			}
 		}
 		catch (err) {
