@@ -1,0 +1,58 @@
+@import "../abstracts/variables";
+@import "../abstracts/functions";
+@import "../abstracts/mixins";
+@import "../abstracts/placeholders";
+@import "../abstracts/utilities";
+@import "../themes/light";
+
+:host {
+	display: block;
+	width: 100%;
+}
+
+richlistbox {
+	padding: 2px;
+
+	richlistitem {
+		line-height: 1.5em;
+	}
+
+	@media (-moz-platform: macos) {
+		&:not(:focus) richlistitem[selected="true"] {
+			background-color: -moz-mac-secondaryhighlight;
+		}
+	}
+}
+
+#locale-selector-wrapper,
+#style-selector-wrapper,
+#display-as-wrapper {
+	background-color: $shade-3;
+	border-radius: $border-radius-base;
+	border: 1px solid darken($shade-3, 5%);
+	margin-top: 1.5em;
+	padding: $space-xs;
+}
+
+label[for="style-selector"] {
+	margin-top: 1.5em;
+	font-size: 13px;
+}
+
+#style-selector-wrapper {
+	margin-top: 0;
+}
+
+#locale-selector-wrapper {
+	display: flex;
+	align-items: center;
+}
+
+#display-as-wrapper {
+	margin-top: 1.5em;
+
+	radiogroup {
+		display: flex;
+		flex-direction: row;
+	}
+}
