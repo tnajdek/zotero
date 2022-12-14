@@ -800,18 +800,15 @@
 			var menulist = document.createXULElement("menulist", { is: "menulist-item-types" });
 			menulist.id = "item-type-menu";
 			menulist.className = "zotero-clicky";
-			menulist.addEventListener('command', (event) => {
-				var target = event.target;
-				this.changeTypeTo(target.value, target);
+			menulist.addEventListener('popuphiding', (event) => {
+				const target = event.currentTarget;
+				this.changeTypeTo(target.getAttribute('value'), target);
 			});
 			menulist.addEventListener('focus', () => {
 				this.ensureElementIsVisible(menulist);
 			});
-			menulist.addEventListener('keypress', (event) => {
-				if (event.keyCode == event.DOM_VK_TAB) {
-					this.itemTypeMenuTab(event);
-				}
-			});
+			menulist.addEventListener('keypress', this.handleKeyPressItemType.bind(this));
+			
 			td.appendChild(menulist);
 			this._infoTable.firstChild.appendChild(td);
 		}
@@ -1816,6 +1813,30 @@
 			
 			// Otherwise let the autocomplete popup handle matters
 		}
+
+		handleKeyPressItemType(event) {
+			if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === ' ') {
+				event.preventDefault();
+				this.itemTypeMenu.open = true;
+				return;
+			}
+			if(event.key === 'Tab') {
+				this.itemTypeMenuTab(event);
+				return;
+			}
+			if(event.key === 'Escape') {
+				event.preventDefault();
+				this.itemTypeMenu.open = false;
+				document.commandDispatcher.focusedElement.blur();
+				this.returnFocusToItemsTree();
+				return;
+			}
+			if (event.charCode > 0) {
+				// disable pressing a letter to select an item type
+				event.preventDefault();
+				return;
+			}
+		}
 		
 		handleKeyPress(event) {
 			var target = event.target;
@@ -1889,13 +1910,7 @@
 					target.value = target.dataset.originalValue;
 					
 					focused.blur();
-					
-					// Return focus to items pane
-					var tree = document.getElementById('zotero-items-tree');
-					if (tree) {
-						tree.focus();
-					}
-					
+					this.returnFocusToItemsTree();
 					return;
 					
 				case event.DOM_VK_TAB:
@@ -1921,6 +1936,13 @@
 			// Shift-tab
 			else {
 				this._tabDirection = false;
+			}
+		}
+
+		returnFocusToItemsTree() {
+			var tree = document.getElementById('zotero-items-tree');
+			if (tree) {
+				tree.focus();
 			}
 		}
 		
