@@ -1940,10 +1940,7 @@
 		}
 
 		returnFocusToItemsTree() {
-			var tree = document.getElementById('zotero-items-tree');
-			if (tree) {
-				tree.focus();
-			}
+			document.getElementById('zotero-items-tree')?.querySelector('[tabindex]')?.focus?.();
 		}
 		
 		async hideEditor(textbox) {
