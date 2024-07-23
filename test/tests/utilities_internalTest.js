@@ -737,5 +737,98 @@ describe("Zotero.Utilities.Internal", function () {
 			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
 			assert.equal(html, 'yes1yes2 yes3');
 		});
+
+		it("should support string-processing functions", function () {
+			let vars = {
+				string: 'afoobar'
+			};
+			var template = "{{ string.substring(1, 4) }}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'foo');
+		});
+
+		it("should support string-processing functions in comparison statements", function () {
+			let vars = {
+				string: 'foobar'
+			};
+			var template = "{{if string.startsWith(\"foo\") }}yes{{else}}no{{endif}}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'yes');
+
+			var template2 = "{{if string.startsWith(\"bar\") }}yes{{else}}no{{endif}}";
+			var html2 = Zotero.Utilities.Internal.generateHTMLFromTemplate(template2, vars);
+			assert.equal(html2, 'no');
+
+			var template3 = "{{if string.endsWith(bar) }}yes{{else}}no{{endif}}";
+			var html3 = Zotero.Utilities.Internal.generateHTMLFromTemplate(template3, vars);
+			assert.equal(html3, 'yes');
+		});
+
+		it("should support regexp string-processing function in comparison statement", function () {
+			let vars = {
+				string: 'moofoobar'
+			};
+			var template = "{{if string.regexp(/foo/) }}yes{{else}}no{{endif}}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'yes');
+
+			var template2 = "{{if string.regexp(/baz/) }}yes{{else}}no{{endif}}";
+			var html2 = Zotero.Utilities.Internal.generateHTMLFromTemplate(template2, vars);
+			assert.equal(html2, 'no');
+
+			var template3 = "{{if string.regexp(foo) }}yes{{else}}no{{endif}}";
+			var html3 = Zotero.Utilities.Internal.generateHTMLFromTemplate(template3, vars);
+			assert.equal(html3, 'yes');
+
+			var template4 = "{{if string.regexp(baz) }}yes{{else}}no{{endif}}";
+			var html4 = Zotero.Utilities.Internal.generateHTMLFromTemplate(template4, vars);
+			assert.equal(html4, 'no');
+		});
+
+		it("should support string-processing functions as conditions and values", function () {
+			let vars = {
+				string: 'foobar'
+			};
+			var template = "{{if string.startsWith(foo) }}{{string.substring(0, 3)}}{{else}}{{string.substring(3, 6)}}{{endif}}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'foo');
+		});
+		
+		it("should support string-processing functions acting on outputs of template-level functions", function () {
+			let vars = {
+				fn: () => 'foobar',
+			};
+			var template = "{{if fn.startsWith(foo) }}{{fn.substring(0, 3)}}{{else}}{{fn.substring(3, 6)}}{{endif}}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'foo');
+		});
+
+		it("should support string-processing functions acting on outputs of template-level functions with arguments", function () {
+			let vars = {
+				sum: ({ a, b }) => (parseInt(a) + parseInt(b)).toString(),
+			};
+			var template = "{{if {{ sum.startsWith(3) a=\"10\" b=\"22\" }} }}{{if {{ sum.length() a=\"10\" b=\"22\" }} == \"2\" }}{{ sum a=\"10\" b=\"22\" }} is between 30 and 40{{endif}}{{else}}no math{{endif}}";
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, '32 is between 30 and 40');
+		});
+
+		it("should ignore functions that are not whitelisted", function () {
+			let vars = {
+				foo: () => 'foobar',
+			};
+			var template = '{{ foo.charAt(0) }}';
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'foobar');
+		});
+
+		it("should ignore invalid regexp calls", function () {
+			let vars = {
+				foo: 'foobar',
+			};
+			// Invalid regular expression: /(.../: Unterminated group
+			var template = '{{ foo.regexp(/(.../) }}';
+			var html = Zotero.Utilities.Internal.generateHTMLFromTemplate(template, vars);
+			assert.equal(html, 'foobar');
+		});
 	});
 });

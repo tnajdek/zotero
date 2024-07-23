@@ -2117,6 +2117,14 @@ Zotero.Utilities.Internal = {
 	 */
 	generateHTMLFromTemplate: function (template, vars) {
 		const hyphenToCamel = varName => varName.replace(/-(.)/g, (_, g1) => g1.toUpperCase());
+		let fns = ['substring', 'startsWith', 'endsWith', 'includes', 'toLowerCase', 'toUpperCase', 'match', 'length'];
+		let fnLookup = new Map([
+			['substr', 'substring'],
+			['startswith', 'startsWith'],
+			['endswith', 'endsWith'],
+			['contains', 'includes'],
+			['regexp', 'match']
+		]);
 
 		const getAttributes = (part) => {
 			let attrsRegexp = new RegExp(/(([\w-]*) *=+ *(['"])((\\\3|[^\3])*?)\3)/g);
@@ -2131,14 +2139,69 @@ Zotero.Utilities.Internal = {
 		};
 
 		
-		const evaluateIdentifier = (ident, args = {}) => {
+		const evaluateFnCall = (identValue, fnCall) => {
+			let match = fnCall.match(/([^(]+)\(([^)]*)\)/);
+			if (!match) {
+				return identValue;
+			}
+			let fn = match[1];
+			let args = match[2].split(',').map((arg) => {
+				let match = arg.match(/(['"])(.*?)\1/);
+				if (match) {
+					arg = match[2];
+				}
+				return arg.trim();
+			});
+
+			if (fnLookup.has(fn)) {
+				fn = fnLookup.get(fn);
+			}
+			
+			if (!fns.includes(fn)) {
+				return identValue;
+			}
+
+			if (fn === 'match') {
+				args = args.map(arg => new RegExp(arg.replace(/\/(.+?)\//, '$1')));
+			}
+
+			if (fn === 'length') {
+				identValue = identValue.length;
+			}
+			else {
+				if (typeof (identValue) !== 'string' || typeof identValue[fn] !== 'function') {
+					return identValue;
+				}
+
+				try {
+					identValue = identValue[fn](...args);
+				}
+				catch (_e) {
+					// ignore
+				}
+			}
+
+			if (typeof identValue === 'object') {
+				identValue = !!identValue;
+			}
+
+			if (typeof identValue === 'boolean') {
+				identValue = identValue ? 'true' : '';
+			}
+
+			return identValue.toString();
+		};
+		
+		const evaluateIdentifier = (identWithFnCall, args = {}) => {
+			let [ident, fnCall] = identWithFnCall.split('.', 2);
 			ident = hyphenToCamel(ident);
+
 
 			if (!(ident in vars)) {
 				return '';
 			}
 
-			const identValue = typeof vars[ident] === 'function' ? vars[ident](args) : vars[ident];
+			let identValue = typeof vars[ident] === 'function' ? vars[ident](args) : vars[ident];
 
 			if (Array.isArray(identValue)) {
 				return identValue.length ? identValue.join(',') : '';
@@ -2147,6 +2210,10 @@ Zotero.Utilities.Internal = {
 			if (typeof identValue !== 'string') {
 				throw new Error(`Identifier "${ident}" does not evaluate to a string`);
 			}
+
+			if (fnCall) {
+				identValue = evaluateFnCall(identValue, fnCall);
+			}
 			
 			return identValue;
 		};
@@ -2154,32 +2221,37 @@ Zotero.Utilities.Internal = {
 		// evaluates extracted (i.e. without brackets) statement (e.g. `sum a="1" b="2"`) into a string value
 		const evaluateStatement = (statement) => {
 			statement = statement.trim();
-			const operator = statement.split(' ', 1)[0].trim();
-			const args = statement.slice(operator.length).trim();
-
-			return evaluateIdentifier(operator, getAttributes(args));
+			let index = statement.match(/\s(?=[^()]*(?:\(|$))/)?.index;
+			if (index) {
+				let operator = statement.slice(0, index).trim();
+				let args = statement.slice(index).trim();
+				return evaluateIdentifier(operator, getAttributes(args));
+			}
+			return evaluateIdentifier(statement);
 		};
 
 		// splits raw (i.e. bracketed) statement (e.g. `{{ sum a="1" b="2" }}) into operator and arguments (e.g. ['sum', 'a="1" b="2"'])
 		const splitStatement = (statement) => {
 			statement = statement.slice(2, -2).trim();
-			const operator = statement.split(' ', 1)[0].trim();
-			const args = statement.slice(operator.length).trim();
-			return [operator, args];
+			let index = statement.match(/\s(?=[^()]*(?:\(|$))/)?.index;
+			if (index) {
+				return [statement.slice(0, index), statement.slice(index).trim()];
+			}
+			return [statement, ''];
 		};
 
 		// evaluates a condition (e.g. `a == "b"`) into a boolean value
 		const evaluateCondition = (condition) => {
-			const comparators = ['==', '!='];
+			const operators = ['==', '!='].join('|');
 			condition = condition.trim();
 
 			// match[1] if left is statement, match[3] if left is literal, match[4] if left is identifier
 			// match[6] if right is statement, match[8] if right is literal, match[9] if right is identifier
 			// match[2] and match[7] are used to match the quotes around the literal (and then check that the other quote is the same)
-			const match = condition.match(new RegExp(String.raw`(?:{{(.*?)}}|(?:(['"])(.*?)\2)|([^ ]+)) *(${comparators.join('|')}) *(?:{{(.*?)}}|(?:(['"])(.*?)\7)|([^ ]+))`));
+			const match = condition.match(new RegExp(String.raw`(?:{{(.*?)}}|(?:(['"])(.*?)\2)|(.*?(?!(?:${operators})))) *(${operators}) *(?:{{(.*?)}}|(?:(['"])(.*?)\7)|(.*))`));
 			
 			if (!match) {
-				// condition is a statement or identifier without a comparator
+				// condition is a statement or identifier without an operator
 				if (condition.startsWith('{{')) {
 					const [operator, args] = splitStatement(condition);
 					return !!evaluateIdentifier(operator, getAttributes(args));
