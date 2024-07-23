@@ -59,10 +59,10 @@ Zotero_Preferences.FileRenaming = {
 		return null;
 	},
 
-	updatePreview() {
+	async updatePreview() {
 		const [item, ext] = this.getActiveTopLevelItem() ?? [this.mockItem ?? this.makeMockItem(), this.defaultExt];
 		const tpl = document.getElementById('file-renaming-format-template').value;
-		const preview = Zotero.Attachments.getFileBaseNameFromItem(item, tpl);
+		const preview = await Zotero.Attachments.getFileBaseNameFromItem(item, tpl);
 		document.getElementById('file-renaming-format-preview').innerText = `${preview}.${ext}`;
 	},
 

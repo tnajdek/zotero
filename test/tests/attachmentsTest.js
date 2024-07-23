@@ -1334,9 +1334,9 @@ describe("Zotero.Attachments", function() {
 	});
 	
 	describe("#getFileBaseNameFromItem()", function () {
-		var item, itemManyAuthors, itemPatent, itemIncomplete, itemBookSection, itemSpaces, itemSuffixes, itemKeepDashes;
+		var item, itemManyAuthors, itemPatent, itemIncomplete, itemBookSection, itemSpaces, itemSuffixes, itemKeepDashes, itemAttachment;
 
-		before(() => {
+		before(async () => {
 			item = createUnsavedDataObject('item', { title: 'Lorem Ipsum', itemType: 'journalArticle' });
 			item.setCreators([
 				{ firstName: 'Foocius', lastName: 'Barius', creatorType: 'author' },
@@ -1347,7 +1347,14 @@ describe("Zotero.Attachments", function() {
 			item.setField('journalAbbreviation', 'BPP');
 			item.setField('issue', '42');
 			item.setField('pages', '321');
+			await item.saveTx();
 
+			let file = getTestDataDirectory();
+			file.append('empty.pdf');
+			itemAttachment = await Zotero.Attachments.importFromFile({
+				file: file,
+				parentItemID: item.id,
+			});
 			
 			itemManyAuthors = createUnsavedDataObject('item', { title: 'Has Many Authors', itemType: 'book' });
 			itemManyAuthors.setCreators([
@@ -1384,268 +1391,276 @@ describe("Zotero.Attachments", function() {
 			itemKeepDashes.setField('date', "1999-07-15");
 		});
 
+		after(async () => {
+			await Zotero.Items.erase(itemAttachment.id);
+			await Zotero.Items.erase(item.id);
+		});
 		
-		it('should strip HTML tags from title', function () {
+		it('should strip HTML tags from title', async function () {
 			var htmlItem = createUnsavedDataObject('item', { title: 'Foo <i>Bar</i> Foo<br><br/><br />Bar' });
-			var str = Zotero.Attachments.getFileBaseNameFromItem(htmlItem, '{{ title }}');
+			var str = await Zotero.Attachments.getFileBaseNameFromItem(htmlItem, '{{ title }}');
 			assert.equal(str, 'Foo Bar Foo Bar');
 		});
 
-		it('should accept basic formating options', function () {
+		it('should accept basic formating options', async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, 'FOO{{year}}BAR'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, 'FOO{{year}}BAR'),
 				'FOO1975BAR'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{firstCreator suffix=" - "}}{{year suffix=" - "}}{{title truncate="50" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{firstCreator suffix=" - "}}{{year suffix=" - "}}{{title truncate="50" }}'),
 				'Barius and Pixelus - 1975 - Lorem Ipsum'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{year suffix="-"}}{{firstCreator truncate="10" suffix="-"}}{{title truncate="5" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{year suffix="-"}}{{firstCreator truncate="10" suffix="-"}}{{title truncate="5" }}'),
 				'1975-Barius and-Lorem'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, 'foo {{year}} bar {{year prefix="++" truncate="2" suffix="++"}}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, 'foo {{year}} bar {{year prefix="++" truncate="2" suffix="++"}}'),
 				'foo 1975 bar ++19++'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{firstCreator suffix=" - "}}{{year suffix=" - "}}{{title}}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{firstCreator suffix=" - "}}{{year suffix=" - "}}{{title}}'),
 				'Author et al. - 2000 - Has Many Authors'
 			);
 		});
 
-		it('should trim whitespaces from a value', function () {
+		it('should trim whitespaces from a value', async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemSpaces, '{{ title }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemSpaces, '{{ title }}'),
 				'Spaces!'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{title truncate="6"}}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{title truncate="6"}}'),
 				'Lorem'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{firstCreator truncate="7"}}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{firstCreator truncate="7"}}'),
 				'Barius'
 			);
 			// but preserve if it's configured as a prefix or suffix
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{title prefix=" " suffix=" "}}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{title prefix=" " suffix=" "}}'),
 				' Lorem Ipsum '
 			);
 		});
 
-		it('should offer a range of options for composing creators', function () {
+		it('should offer a range of options for composing creators', async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" }}'),
 				'Barius'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" truncate="3" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" truncate="3" }}'),
 				'Bar'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="5" join=" " }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="5" join=" " }}'),
 				'Barius Pixelus'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="3" join=" " }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="3" join=" " }}'),
 				'Author Creator Person'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ authors }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ authors }}'),
 				'AcmeCorp'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" name="family" initialize="family" join=" " initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" name="family" initialize="family" join=" " initialize-with="" }}'),
 				'A C'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ authors max="2" name="family" initialize="family" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ authors max="2" name="family" initialize="family" initialize-with="" }}'),
 				'A'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" name="full" initialize="full" name-part-separator="" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" name="full" initialize="full" name-part-separator="" initialize-with="" }}'),
 				'FB'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="3" name="full" initialize="full" name-part-separator="" join=" " initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="3" name="full" initialize="full" name-part-separator="" join=" " initialize-with="" }}'),
 				'FA SC TP'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" name="family-given" initialize="given" name-part-separator="" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="1" name="family-given" initialize="given" name-part-separator="" initialize-with="" }}'),
 				'BariusF'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" name="family-given" initialize="given" join=" " name-part-separator="" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" name="family-given" initialize="given" join=" " name-part-separator="" initialize-with="" }}'),
 				'AuthorF CreatorS'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ editors }}test'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ editors }}test'),
 				'test'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" }}'),
 				'Editor1'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="5" join=" " }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="5" join=" " }}'),
 				'Editor1 ProEditor2 SuperbEditor3'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="2" name="family" initialize="family" join=" " initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="2" name="family" initialize="family" join=" " initialize-with="" }}'),
 				'E P'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" name="full" initialize="full" name-part-separator="" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" name="full" initialize="full" name-part-separator="" initialize-with="" }}'),
 				'SE'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" name="family-given" initialize="given" name-part-separator="" initialize-with="" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ editors max="1" name="family-given" initialize="given" name-part-separator="" initialize-with="" }}'),
 				'Editor1S'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="3" name="full" initialize="given" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ authors max="3" name="full" initialize="given" }}'),
 				'F. Barius, B. Pixelus'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ creators case="upper" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ creators case="upper" }}'),
 				'BARIUS, PIXELUS'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ authors max="2" }}'),
 				'Author, Creator'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ creators max="3" join=" " name="given" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ creators max="3" join=" " name="given" }}'),
 				'First Second Third'
 			);
 		});
 
 		it('should accept case parameter', async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="upper" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="upper" }}'),
 				'BEST PUBLICATIONS PLACE'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="lower" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="lower" }}'),
 				'best publications place'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="title" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="title" }}'),
 				'Best Publications Place'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="hyphen" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="hyphen" }}'),
 				'best-publications-place'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="camel" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="camel" }}'),
 				'bestPublicationsPlace'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="snake" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle case="snake" }}'),
 				'best_publications_place'
 			);
 		});
 
-		it('should accept itemType or any other field', function () {
+		it('should accept itemType, attachmentTitle or any other field', async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ itemType localize="true" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ itemType localize="true" }}'),
 				'Journal Article'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ publicationTitle }}'),
 				'Best Publications Place'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ journalAbbreviation }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ journalAbbreviation }}'),
 				'BPP'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ publisher }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ publisher }}'),
 				'Awesome House'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ volume }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, '{{ volume }}'),
 				'3'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ issue }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ issue }}'),
 				'42'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ pages }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ pages }}'),
 				'321'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ number }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ number }}'),
 				'HBK-8539b'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ assignee }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemPatent, '{{ assignee }}'),
 				'Fast FooBar'
 			);
+			assert.equal(
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ attachmentTitle }}'),
+				'PDF'
+			);
 		});
 
-		it("should support simple logic in template syntax", function () {
+		it("should support simple logic in template syntax", async function () {
 			const template = '{{ if itemType == "journalArticle" }}j-{{ publicationTitle case="hyphen" }}{{ elseif itemType == "patent" }}p-{{ number case="hyphen" }}{{ else }}o-{{ title case="hyphen" }}{{ endif }}';
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, template), 'j-best-publications-place'
+				await Zotero.Attachments.getFileBaseNameFromItem(item, template), 'j-best-publications-place'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemPatent, template), 'p-hbk-8539b'
+				await Zotero.Attachments.getFileBaseNameFromItem(itemPatent, template), 'p-hbk-8539b'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, template), 'o-has-many-authors'
+				await Zotero.Attachments.getFileBaseNameFromItem(itemManyAuthors, template), 'o-has-many-authors'
 			);
 		});
 
-		it("should skip missing fields", function () {
+		it("should skip missing fields", async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemIncomplete, '{{ authors prefix = "a" suffix="-" }}{{ publicationTitle case="hyphen" suffix="-" }}{{ title }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemIncomplete, '{{ authors prefix = "a" suffix="-" }}{{ publicationTitle case="hyphen" suffix="-" }}{{ title }}'),
 				'Incomplete'
 			);
 		});
 
-		it("should recognized base-mapped fields", function () {
+		it("should recognized base-mapped fields", async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, '{{ bookTitle case="snake" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, '{{ bookTitle case="snake" }}'),
 				'book_title'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, '{{ publicationTitle case="snake" }}'),
-				'book_title'
-			);
-		});
-
-		it("should trim spaces from template string", function () {
-			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, ' {{ bookTitle case="snake" }} '),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, '{{ publicationTitle case="snake" }}'),
 				'book_title'
 			);
 		});
 
-		it("should suppress suffixes where they would create a repeat character", function () {
+		it("should trim spaces from template string", async function () {
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(item, '{{ title suffix="-" }}{{ year prefix="-" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, ' {{ bookTitle case="snake" }} '),
+				'book_title'
+			);
+		});
+
+		it("should suppress suffixes where they would create a repeat character", async function () {
+			assert.equal(
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ title suffix="-" }}{{ year prefix="-" }}'),
 				'Lorem Ipsum-1975'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title prefix="-" suffix="-" }}{{ year }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title prefix="-" suffix="-" }}{{ year }}'),
 				'-Suffixes-1999'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title suffix="-" }}{{ year prefix="-" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title suffix="-" }}{{ year prefix="-" }}'),
 				'-Suffixes-1999'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, '{{ title suffix="-" }}{{ year prefix="-" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, '{{ title suffix="-" }}{{ year prefix="-" }}'),
 				'keep--dashes-1999'
 			);
 			// keep--dashes is a title and should be kept unchanged but "keep" and "dashes" are fields
 			// separated by prefixes and suffixes where repeated characters should be suppressed
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, '{{ title suffix="-" }}{{ publicationTitle suffix="-" }}{{ issue prefix="-" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, '{{ title suffix="-" }}{{ publicationTitle suffix="-" }}{{ issue prefix="-" }}'),
 				'keep--dashes-keep-dashes'
 			);
 			// keep--dashes is provided as literal part of the template and should be kept unchanged
@@ -1653,12 +1668,24 @@ describe("Zotero.Attachments", function() {
 			// characters should be suppressed. Finally "keep--dashes" title is appended at the end
 			// which should also be kept as is.
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, 'keep--dashes-{{ publicationTitle prefix="-" suffix="-" }}{{ issue prefix="-" suffix="-" }}-keep--dashes-{{ publicationTitle suffix="-" }}test{{ title prefix="-" }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemKeepDashes, 'keep--dashes-{{ publicationTitle prefix="-" suffix="-" }}{{ issue prefix="-" suffix="-" }}-keep--dashes-{{ publicationTitle suffix="-" }}test{{ title prefix="-" }}'),
 				'keep--dashes-keep-dashes-keep--dashes-keep-test-keep--dashes'
 			);
 			assert.equal(
-				Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title prefix="/" suffix="\\" }}{{ year }}'),
+				await Zotero.Attachments.getFileBaseNameFromItem(itemSuffixes, '{{ title prefix="/" suffix="\\" }}{{ year }}'),
 				'-Suffixes-1999'
+			);
+		});
+
+		it("should be possible to test attachmentTitle", async function () {
+			assert.equal(
+				await Zotero.Attachments.getFileBaseNameFromItem(item, '{{ if attachmentTitle.endsWith("PDF") }}has-{{ attachmentTitle case="lower" }}{{ else }}no-pdf{{ endif }}'),
+				'has-pdf'
+			);
+
+			assert.equal(
+				await Zotero.Attachments.getFileBaseNameFromItem(itemBookSection, '{{ if attachmentTitle.endsWith("PDF") }}has-{{ attachmentTitle case="lower" }}{{ else }}no-pdf{{ endif }}'),
+				'no-pdf'
 			);
 		});
 
@@ -1700,7 +1727,7 @@ describe("Zotero.Attachments", function() {
 		it("should strip bidi isolates from firstCreator", async function () {
 			var item = createUnsavedDataObject('item',
 				{ creators: [{ name: 'Foo', creatorType: 'author' }, { name: 'Bar', creatorType: 'author' }] });
-			var str = Zotero.Attachments.getFileBaseNameFromItem(item);
+			var str = await Zotero.Attachments.getFileBaseNameFromItem(item);
 			assert.equal(str, Zotero.getString('general.andJoiner', ['Foo', 'Bar']) + ' - ');
 		});
 	});

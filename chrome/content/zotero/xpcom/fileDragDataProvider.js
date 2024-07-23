@@ -115,7 +115,7 @@ Zotero.FileDragDataProvider.prototype = {
 
 				// Create folder if multiple files
 				if (numFiles > 1) {
-					var dirName = Zotero.Attachments.getFileBaseNameFromItem(items[i]);
+					var dirName = items[i].getField('title');
 					try {
 						if (useTemp) {
 							var copiedFile = destDir.clone();

@@ -64,7 +64,7 @@ describe("Document Recognition", function() {
 			// The file should have been renamed
 			assert.equal(
 				attachment.attachmentFilename,
-				Zotero.Attachments.getFileBaseNameFromItem(item) + '.pdf'
+				await Zotero.Attachments.getFileBaseNameFromItem(item) + '.pdf'
 			);
 			
 			// The title should have changed
@@ -270,7 +270,7 @@ describe("Document Recognition", function() {
 			// The file should have been renamed
 			assert.equal(
 				attachment.attachmentFilename,
-				Zotero.Attachments.getFileBaseNameFromItem(item) + '.pdf'
+				await Zotero.Attachments.getFileBaseNameFromItem(item) + '.pdf'
 			);
 
 			// The title should have changed
@@ -364,7 +364,7 @@ describe("Document Recognition", function() {
 			// The file should have been renamed
 			assert.equal(
 				attachment.attachmentFilename,
-				Zotero.Attachments.getFileBaseNameFromItem(item) + '.epub'
+				await Zotero.Attachments.getFileBaseNameFromItem(item) + '.epub'
 			);
 
 			// The title should have changed
@@ -402,7 +402,7 @@ describe("Document Recognition", function() {
 			// The file should have been renamed
 			assert.equal(
 				attachment.attachmentFilename,
-				Zotero.Attachments.getFileBaseNameFromItem(item) + '.epub'
+				await Zotero.Attachments.getFileBaseNameFromItem(item) + '.epub'
 			);
 
 			// The title should have changed

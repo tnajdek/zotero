@@ -580,7 +580,7 @@ Zotero.Attachments = new function () {
 			// Rename attachment
 			if (renameIfAllowedType && !fileBaseName && this.getRenamedFileTypes().includes(contentType)) {
 				let parentItem = Zotero.Items.get(parentItemID);
-				fileBaseName = this.getFileBaseNameFromItem(parentItem);
+				fileBaseName = await this.getFileBaseNameFromItem(parentItem);
 			}
 			if (fileBaseName) {
 				let ext = this._getExtensionFromURL(url, contentType);
@@ -1731,7 +1731,7 @@ Zotero.Attachments = new function () {
 	 * @return {Zotero.Item|false} - New Zotero.Item, or false if unsuccessful
 	 */
 	this.addPDFFromURLs = async function (item, urlResolvers, options = {}) {
-		var fileBaseName = this.getFileBaseNameFromItem(item);
+		var fileBaseName = await this.getFileBaseNameFromItem(item);
 		var tmpDir;
 		var tmpFile;
 		var attachmentItem = false;
@@ -2143,13 +2143,23 @@ Zotero.Attachments = new function () {
 	 * @param {Zotero.Item} item
 	 * @param {String} formatString
 	 */
-	this.getFileBaseNameFromItem = function (item, formatString) {
+	this.getFileBaseNameFromItem = async function (item, formatString) {
 		if (!(item instanceof Zotero.Item)) {
 			throw new Error("'item' must be a Zotero.Item");
 		}
 
 		if (!formatString) {
 			formatString = Zotero.Prefs.get('attachmentRenameTemplate');
+		}
+
+		let bestAttachment = null;
+		if (formatString.includes('attachmentTitle')) {
+			try {
+				bestAttachment = await item.getBestAttachment();
+			}
+			catch (e) {
+				// ignore
+			}
 		}
 
 		let chunks = [];
@@ -2325,8 +2335,9 @@ Zotero.Attachments = new function () {
 			item.getField('firstCreator', true, true), args
 		);
 
-		const vars = { ...fields, ...creatorFields, firstCreator, itemType, year };
+		const attachmentTitle = args => common(bestAttachment?.getField('title') ?? '', args);
 
+		const vars = { ...fields, ...creatorFields, attachmentTitle, firstCreator, itemType, year };
 
 		// Final name is generated twice. In the first pass we collect all affixed values and determine protected literals.
 		// This is done in order to remove repeated suffixes, except if these appear in the value or the format string itself.
