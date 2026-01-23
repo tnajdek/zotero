@@ -180,6 +180,23 @@
 			return this._input;
 		}
 
+		get multipleValues() {
+			return this.hasAttribute('multiple-values');
+		}
+		
+		set multipleValues(multipleValues) {
+			this.setAttribute('multiple-values', multipleValues);
+		}
+		
+		// true if the value is unchanged since the last blur event. Relevant for batch editing.
+		get cancelled() {
+			return this.getAttribute('cancelled') === 'true';
+		}
+		
+		set cancelled(cancelled) {
+			this.setAttribute('cancelled', cancelled);
+		}
+
 		_resetTextDirection() {
 			this._input?.removeAttribute('dir');
 		}
@@ -381,6 +398,9 @@
 				this._ignoredWindowInactiveBlur = false;
 				return;
 			}
+			
+			this.cancelled = false;
+			this._confirmed = false;
 
 			let valueBeforeFocus = this.value;
 			this.dispatchEvent(new CustomEvent('focus'));
@@ -400,7 +420,13 @@
 			}
 
 			if (!('initialValue' in this._input.dataset)) {
-				this._input.dataset.initialValue = this._input.value;
+				this._input.dataset.initialValue = this.value;
+			}
+			
+			if (this.multipleValues) {
+				this._input.mController.startSearch("");
+				this._input.placeholder = '';
+				this._input.value = '';
 			}
 		};
 		
@@ -410,6 +436,15 @@
 				this._ignoredWindowInactiveBlur = true;
 				return;
 			}
+
+			if (this.multipleValues) {
+				if (this.cancelled || (this._input.value === '' && !this._confirmed)) {
+					this.value = '';
+					this.placeholder = "Multiple";
+					this.cancelled = true;
+				}
+			}
+			
 			this.dispatchEvent(new Event('blur'));
 			this._resetStateAfterBlur();
 		};
@@ -427,6 +462,7 @@
 			if (event.key === 'Enter') {
 				if (this.multiline === event.shiftKey) {
 					event.preventDefault();
+					this._confirmed = true;
 					this._input.blur();
 				}
 				// Do not let out shift-enter event on multiline, since it should never do
@@ -436,9 +472,14 @@
 				}
 			}
 			else if (event.key === 'Escape') {
-				let initialValue = this._input.dataset.initialValue ?? '';
-				this.setAttribute('value', initialValue);
-				this._input.value = initialValue;
+				if (this.multipleValues) {
+					this.cancelled = true;
+				}
+				else {
+					let initialValue = this._input.dataset.initialValue ?? '';
+					this.setAttribute('value', initialValue);
+					this._input.value = initialValue;
+				}
 				this._input.blur();
 			}
 		};

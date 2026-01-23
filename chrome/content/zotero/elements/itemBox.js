@@ -50,6 +50,7 @@
 			this.eventHandlers = [];
 			this.itemTypeMenu = null;
 			
+			this._extraItems = [];
 			this._mode = 'view';
 			this._visibleFields = [];
 			this._hiddenFields = [];
@@ -275,6 +276,18 @@
 				this.updateCustomRowProperty(rowElem);
 			}
 		}
+
+		get extraItems() {
+			return this._extraItems;
+		}
+
+		set extraItems(val) {
+			if (!Array.isArray(val)) {
+				return;
+			}
+			this._extraItems = val.filter(item => item instanceof Zotero.Item && item.isRegularItem());
+			this._resetRenderedFlags();
+		}
 		
 		// .ref is an alias for .item
 		get ref() {
@@ -496,6 +509,7 @@
 					continue;
 				}
 				let val = '';
+				let extraFieldValues = [];
 				
 				if (fieldName) {
 					var fieldID = Zotero.ItemFields.getID(fieldName);
@@ -521,6 +535,12 @@
 					}
 					else {
 						val = this.item.getField(fieldName);
+
+						if (this._extraItems.length) {
+							extraFieldValues = this._extraItems
+								.map(item => item.getField(fieldName))
+								.filter(v => v.length > 0);
+						}
 					}
 					
 					if (!val && this.hideEmptyFields
@@ -546,7 +566,7 @@
 				rowLabel.setAttribute('fieldname', fieldName);
 				
 				let valueElement = this.createFieldValueElement(
-					val, fieldName
+					val, fieldName, extraFieldValues
 				);
 				
 				if (fieldName) {
@@ -1698,7 +1718,7 @@
 			return valueElement;
 		}
 
-		createFieldValueElement(valueText, fieldName) {
+		createFieldValueElement(valueText, fieldName, extraFieldValues = []) {
 			valueText += '';
 
 			if (fieldName) {
@@ -1771,6 +1791,26 @@
 				// autocomplete for creator names is added in addCreatorRow
 				this.addAutocompleteToElement(valueElement);
 			}
+
+			const hasMultipleValues = extraFieldValues.length && extraFieldValues.some(v => v !== valueText);
+			
+			if (hasMultipleValues && this._fieldIsClickable(fieldName)) {
+				let options = [valueText, ...extraFieldValues].filter(o => o.length > 0);
+				valueElement.multipleValues = true;
+				valueElement.value = '';
+				valueElement.placeholder = "Multiple";
+				valueElement.initialValue = valueText;
+				valueElement.autocomplete = {
+					minResultsForPopup: 1,
+					noRollupOnEmptySearch: true,
+					completeSelectedIndex: true,
+					ignoreBlurWhileSearching: false,
+					search: 'zotero-options',
+					searchParam: JSON.stringify({ search: 'zotero-options', options }),
+					popup: 'PopupAutoComplete',
+				};
+			}
+
 			return valueElement;
 		}
 		
@@ -2103,6 +2143,10 @@
 			if (this.ignoreBlur || !textbox) {
 				return;
 			}
+			
+			if (textbox.cancelled) {
+				return;
+			}
 
 			var fieldName = textbox.getAttribute('fieldname');
 
@@ -2240,7 +2284,18 @@
 			}
 			
 			if (this.saveOnEdit) {
-				await this.item.saveTx();
+				await Zotero.DB.executeTransaction(async () => {
+					await this.item.save();
+					if (field !== 'creator') {
+						for (let item of this._extraItems) {
+							this._modifyField(fieldName, value, item);
+							await item.save();
+						}
+					}
+				});
+				if (this._extraItems.length) {
+					this._forceRenderAll();
+				}
 			}
 		}
 		
@@ -2256,8 +2311,8 @@
 					|| this._clickableFields.indexOf(fieldName) != -1);
 		}
 		
-		_modifyField(field, value) {
-			this.item.setField(field, value);
+		_modifyField(field, value, item = null) {
+			(item ?? this.item).setField(field, value);
 		}
 		
 		async _setFieldTransformedValue(label, newValue) {

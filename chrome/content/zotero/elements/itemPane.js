@@ -126,10 +126,19 @@
 			if (this.data.length > 0 && this.data.every(item => item.isAnnotation())) {
 				return renderStatus = this.renderAnnotations(this.data);
 			}
+			const noNotes = this.data.every(item => !item.isNote());
+			const noCollections = this.data.every(item => !(item instanceof Zotero.Collection));
+			const noSearches = this.data.every(item => !(item instanceof Zotero.Search));
+			const noFeedItems = this.data.every(item => !item.isFeedItem);
+
+			// Multiple items selected
+			if (this.data.length > 0 && noNotes && noCollections && noSearches && noFeedItems) {
+				renderStatus = this.renderItemPane(this.data);
+			}
 			// Single item selected
-			if (this.data.length == 1) {
+			else if (this.data.length === 1) {
 				let item = this.data[0];
-				
+
 				// If a collection or search is selected, it must be in the trash.
 				if (item instanceof Zotero.Collection || item instanceof Zotero.Search) {
 					renderStatus = this.renderMessage();
@@ -137,11 +146,8 @@
 				else if (item.isNote()) {
 					renderStatus = this.renderNoteEditor(item);
 				}
-				else {
-					renderStatus = this.renderItemPane(item);
-				}
 			}
-			// Zero or multiple items selected
+			// No items selected or multiple items of different types
 			else {
 				renderStatus = this.renderMessage();
 			}
@@ -175,9 +181,12 @@
 			return true;
 		}
 
-		async renderItemPane(item) {
+		async renderItemPane(items) {
 			let previousMode = this.mode;
 			this.mode = "item";
+			if (!Array.isArray(items)) {
+				items = [items];
+			}
 
 			// Fix https://forums.zotero.org/discussion/115450/zotero-7-beta-wrong-vertical-position-in-the-item-pane-after-switching-from-a-note
 			if (previousMode === "note") {
@@ -186,11 +195,12 @@
 					requestIdleCallback(resolve, { timeout: 50 });
 				});
 			}
-			
+
 			this._itemDetails.editable = this.editable;
 			this._itemDetails.tabID = "zotero-pane";
 			this._itemDetails.tabType = "library";
-			this._itemDetails.item = item;
+			this._itemDetails.item = items[0];
+			this._itemDetails.extraItems = items.slice(1);
 			this._itemDetails.collectionTreeRow = this.collectionTreeRow;
 
 			this._itemDetails.render();
@@ -198,8 +208,8 @@
 			if (this.getAttribute("collapsed") == "true") {
 				return true;
 			}
-			
-			if (item.isFeedItem) {
+
+			if (items[0].isFeedItem) {
 				let lastTranslationTarget = Zotero.Prefs.get('feeds.lastTranslationTarget');
 				if (lastTranslationTarget) {
 					let id = parseInt(lastTranslationTarget.substr(1));
@@ -218,7 +228,7 @@
 				// if (!item.isTranslated) {
 				// 	item.translate();
 				// }
-				ZoteroPane.startItemReadTimeout(item.id);
+				ZoteroPane.startItemReadTimeout(items[0].id);
 			}
 			return true;
 		}

@@ -88,6 +88,16 @@
 			this._item = item;
 		}
 
+		get extraItems() {
+			return this._extraItems;
+		}
+
+		set extraItems(val) {
+			if (!Array.isArray(val)) return;
+
+			this._extraItems = val.filter(item => item instanceof Zotero.Item && item.isRegularItem());
+		}
+
 		/*
 		 * For contextPane update
 		 */
@@ -293,6 +303,7 @@
 				box.tabID = this.tabID;
 				box.tabType = this.tabType;
 				box.item = item;
+				box.extraItems = this.extraItems;
 				box.collectionTreeRow = this.collectionTreeRow;
 				// Discard hidden panes
 				if (box.hidden && box.discard) {
