@@ -106,7 +106,11 @@ var ZoteroPane = new function () {
 		}
 		
 		_loaded = true;
-		
+
+		// Register a window controller for global undo/redo. Appending (rather
+		// than inserting at 0) ensures text-editing controllers take priority.
+		window.controllers.appendController(Zotero.UndoHistory.getController(document));
+
 		var zp = document.getElementById('zotero-pane');
 		Zotero.UIProperties.registerRoot(zp);
 		zp.addEventListener('UIPropertiesChanged', () => {
