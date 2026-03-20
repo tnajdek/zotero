@@ -373,7 +373,7 @@
 				event.preventDefault();
 			}
 			let delimiters = [',', ';'];
-			let interceptRegex = new RegExp(`[\\p{L}\\p{N}]+\\s*(${delimiters.join('|')})\\s*[\\p{L}\\p{N}]+`, 'iu');
+			let interceptRegex = new RegExp(`[^${delimiters.join()}]+\\s*(${delimiters.join('|')})\\s*[^${delimiters.join()}]+`, 'iu');
 			let match = str.match(interceptRegex);
 			if (match) {
 				event.preventDefault();

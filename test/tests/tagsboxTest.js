@@ -292,6 +292,8 @@ describe("Item Tags Box", function () {
 				{ str: 'Ιστορία, Επιστήμη', delimiter: ',' },
 				// Korean
 				{ str: '역사, 과학', delimiter: ',' },
+				// Tags containing special characters (e.g. parentheses)
+				{ str: 'foo(), bar()', delimiter: ',' },
 			];
 
 			for (let { str, delimiter } of testCases) {
