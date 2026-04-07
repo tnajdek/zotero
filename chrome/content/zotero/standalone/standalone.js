@@ -52,6 +52,19 @@ const ZoteroStandalone = new function () {
 	});
 
 	/**
+	 * Check whether focus is in a child window (iframe) that handles
+	 * its own undo/redo internally (e.g. note editor, reader).
+	 */
+	function _isFocusInChildWindow() {
+		let focusedWindow = document.commandDispatcher.focusedWindow;
+		if (focusedWindow && focusedWindow !== document.defaultView) {
+			return true;
+		}
+		let el = document.commandDispatcher.focusedElement;
+		return !!(el && (el.tagName === 'iframe' || el.tagName === 'IFRAME'));
+	}
+
+	/**
 	 * Run when standalone window first opens
 	 */
 	this.onLoad = function () {
@@ -115,7 +128,24 @@ const ZoteroStandalone = new function () {
 			Zotero.hideZoteroPaneOverlays();
 			ZoteroPane.init();
 			ZoteroPane.makeVisible();
-			
+
+			// When focus is in a child window (note editor, reader), the
+			// native cmd_undo/cmd_redo dispatch doesn't reach the iframe's
+			// editor (e.g. native redo stack is empty so no beforeinput
+			// event fires). Intercept undo/redo commands and delegate to
+			// the child window's doUndo/doRedo when available.
+			for (let [cmdId, method] of [['cmd_undo', 'doUndo'], ['cmd_redo', 'doRedo']]) {
+				document.getElementById(cmdId)?.addEventListener('command', (event) => {
+					if (!_isFocusInChildWindow()) return;
+					let focusedWindow = document.commandDispatcher.focusedWindow;
+					let wrappedWin = focusedWindow?.wrappedJSObject;
+					if (typeof wrappedWin?.[method] === 'function') {
+						event.stopPropagation();
+						wrappedWin[method]();
+					}
+				});
+			}
+
 			// Don't ask before handing http and https URIs
 			var eps = Components.classes['@mozilla.org/uriloader/external-protocol-service;1']
 					.getService(Components.interfaces.nsIExternalProtocolService);
@@ -251,6 +281,32 @@ const ZoteroStandalone = new function () {
 		// (e.g. focused input), show generic labels and let it take over
 		let nativeUndo = Zotero.UndoHistory.hasNativeUndo(document);
 		let nativeRedo = Zotero.UndoHistory.hasNativeRedo(document);
+
+		// When focus is in a child window (e.g. note editor), the native
+		// contenteditable's redo state doesn't reflect the actual editor's
+		// state (ProseMirror handles undo/redo internally). Query the
+		// iframe's own canUndo/canRedo if available and override the
+		// command state set by goUpdateGlobalEditMenuItems.
+		if (_isFocusInChildWindow()) {
+			let focusedWindow = document.commandDispatcher.focusedWindow;
+			let wrappedWin = focusedWindow?.wrappedJSObject;
+			if (typeof wrappedWin?.canUndo === 'function') {
+				let undoCmd = document.getElementById('cmd_undo');
+				let redoCmd = document.getElementById('cmd_redo');
+				if (wrappedWin.canUndo()) {
+					undoCmd?.removeAttribute('disabled');
+				}
+				else {
+					undoCmd?.setAttribute('disabled', 'true');
+				}
+				if (wrappedWin.canRedo()) {
+					redoCmd?.removeAttribute('disabled');
+				}
+				else {
+					redoCmd?.setAttribute('disabled', 'true');
+				}
+			}
+		}
 
 		let undoAction = !nativeUndo && Zotero.UndoHistory.getUndoAction();
 		if (undoAction) {

@@ -102,6 +102,22 @@ Zotero.UndoHistory = {
 		return this._hasNativeCommand(doc, 'cmd_redo');
 	},
 
+	/**
+	 * Check whether focus is in a child window (iframe) that handles its
+	 * own undo/redo internally (e.g. note editor, reader).
+	 *
+	 * @param {Document} doc
+	 * @return {Boolean}
+	 */
+	isFocusInChildWindow(doc) {
+		let focusedWindow = doc.commandDispatcher.focusedWindow;
+		if (focusedWindow && focusedWindow !== doc.defaultView) {
+			return true;
+		}
+		let el = doc.commandDispatcher.focusedElement;
+		return !!(el && (el.tagName === 'iframe' || el.tagName === 'IFRAME'));
+	},
+
 	_hasNativeCommand(doc, cmd) {
 		// If focus is in a child window (e.g. note-editor or reader iframe),
 		// it handles its own undo/redo internally
